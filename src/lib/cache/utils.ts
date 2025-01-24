@@ -75,6 +75,8 @@ export function getCacheClient() {
       await streamToPromise(stream.pipe(writeStream))
       core.info(`Saved cache to ${tempFile}`)
 
+      // @aayush this signature is different in our version of the cache toolkit
+      // https://github.com/useblacksmith/toolkit/blame/useAxiosForHttpClient/packages/cache/src/internal/cacheHttpClient.ts#L427-L431
       await cacheHttpClient.saveCache(id, tempFile)
       core.info(`Saved cache ${id}`)
 
