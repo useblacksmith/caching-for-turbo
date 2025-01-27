@@ -2,13 +2,7 @@ name: ci
 
 on:
   pull_request:
-    branches:
-      - main
-      - dev
   push:
-    branches:
-      - main
-
   workflow_dispatch:
 
 permissions:
@@ -17,7 +11,7 @@ permissions:
 jobs:
   test-typescript:
     name: TypeScript Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith
 
     steps:
       - name: Checkout
@@ -45,41 +39,7 @@ jobs:
 
   test-action:
     name: GitHub Actions Test (Linux)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        id: setup-node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-          cache: npm
-
-      - name: Install Dependencies
-        id: npm-ci
-        run: npm ci
-
-      - name: Test Local Action
-        uses: ./
-        with:
-          # Use a unique cache prefix for each pipeline & job
-          cache-prefix:
-            ${{ runner.os }}-${{ github.run_id }}-${{ github.run_number }}-${{
-            runner.os }}
-
-      - name: Test build cache
-        run: npm run test
-
-      - name: Test build cache (full cache)
-        run: ./check-full-turbo.sh
-
-  test-action-windows:
-    name: GitHub Actions Test (Windows)
-    runs-on: windows-latest
+    runs-on: blacksmith
 
     steps:
       - name: Checkout

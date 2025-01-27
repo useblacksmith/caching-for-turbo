@@ -41,7 +41,7 @@ export function getCacheClient() {
     version: string
   ): Promise<{
     success: boolean
-    data?: { cacheId: string }
+    data?: { cacheId: string; uploadId: string; uploadUrls: string[] }
   }> => {
     try {
       const reserveCacheResponse = await cacheHttpClient.reserveCache(key, [
@@ -51,7 +51,9 @@ export function getCacheClient() {
         return {
           success: true,
           data: {
-            cacheId: reserveCacheResponse.result.cacheId
+            cacheId: reserveCacheResponse.result.cacheId,
+            uploadId: reserveCacheResponse.result.uploadId,
+            uploadUrls: reserveCacheResponse.result.uploadUrls
           }
         }
       } else if (reserveCacheResponse?.statusCode === 409) {
@@ -67,18 +69,21 @@ export function getCacheClient() {
     }
   }
 
-  const save = async (id: number, stream: Readable): Promise<void> => {
+  const save = async (
+    cacheId: number,
+    uploadId: string,
+    uploadUrls: string[],
+    stream: Readable
+  ): Promise<void> => {
     try {
       //* Create a temporary file to store the cache
-      const tempFile = getTempCachePath(id)
+      const tempFile = getTempCachePath(cacheId)
       const writeStream = createWriteStream(tempFile)
       await streamToPromise(stream.pipe(writeStream))
       core.info(`Saved cache to ${tempFile}`)
 
-      // @aayush this signature is different in our version of the cache toolkit
-      // https://github.com/useblacksmith/toolkit/blame/useAxiosForHttpClient/packages/cache/src/internal/cacheHttpClient.ts#L427-L431
-      await cacheHttpClient.saveCache(id, tempFile)
-      core.info(`Saved cache ${id}`)
+      await cacheHttpClient.saveCache(cacheId, tempFile, uploadUrls, uploadId)
+      core.info(`Saved cache ${cacheId}`)
 
       //* Remove the temporary file
       await unlink(tempFile)
