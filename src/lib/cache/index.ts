@@ -42,7 +42,9 @@ export async function saveCache(
   }
 
   const id = existingCacheResponse.data?.cacheId
-  if (!id) {
+  const uploadId = existingCacheResponse.data?.uploadId
+  const uploadUrls = existingCacheResponse.data?.uploadUrls
+  if (!id || !uploadId || !uploadUrls) {
     throw new Error(
       `Unable to reserve cache (received: ${JSON.stringify(
         existingCacheResponse.data
@@ -50,7 +52,7 @@ export async function saveCache(
     )
   }
   ctx.log.info(`Reserved cache ${id}`)
-  await client.save(parseInt(id), stream)
+  await client.save(parseInt(id), uploadId, uploadUrls, stream)
   ctx.log.info(`Saved cache ${id} for ${hash}`)
 }
 
