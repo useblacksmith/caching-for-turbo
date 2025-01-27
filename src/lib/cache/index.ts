@@ -8,7 +8,14 @@ import {
   statSync
 } from 'node:fs'
 import { getCacheClient } from './utils'
-import { cacheVersion, getCacheKey, getFsCachePath } from '../constants'
+import {
+  cacheVersion,
+  getCacheKey,
+  getFsCachePath,
+  getTempCachePath
+} from '../constants'
+import streamToPromise from 'stream-to-promise'
+import { unlink } from 'node:fs/promises'
 
 type RequestContext = {
   log: {
@@ -31,9 +38,16 @@ export async function saveCache(
     return
   }
   const client = getCacheClient()
+  //* Create a temporary file to store the cache
+  const cacheKey = getCacheKey(hash, tag)
+  const tempFile = getTempCachePath(cacheKey)
+  const writeStream = createWriteStream(tempFile)
+  await streamToPromise(stream.pipe(writeStream))
+  const size = statSync(tempFile).size
   const existingCacheResponse = await client.reserve(
-    getCacheKey(hash, tag),
-    cacheVersion
+    cacheKey,
+    cacheVersion,
+    size
   )
 
   // Silently exit when we have not been able to receive a cache-hit
@@ -52,8 +66,10 @@ export async function saveCache(
     )
   }
   ctx.log.info(`Reserved cache ${id}`)
-  await client.save(parseInt(id), uploadId, uploadUrls, stream)
+  await client.save(id, uploadId, uploadUrls, tempFile)
   ctx.log.info(`Saved cache ${id} for ${hash}`)
+  //* Remove the temporary file
+  await unlink(tempFile)
 }
 
 export async function getCache(
