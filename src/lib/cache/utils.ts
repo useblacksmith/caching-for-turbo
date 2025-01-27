@@ -4,7 +4,6 @@ import * as core from '@actions/core'
 import * as cacheHttpClient from '@actions/cache/lib/internal/cacheHttpClient'
 import streamToPromise from 'stream-to-promise'
 import { createWriteStream } from 'node:fs'
-import { unlink } from 'node:fs/promises'
 import { getTempCachePath } from '../constants'
 
 class HandledError extends Error {
@@ -38,16 +37,22 @@ export function getCacheClient() {
 
   const reserve = async (
     key: string,
-    version: string
+    version: string,
+    size: number
   ): Promise<{
     success: boolean
-    data?: { cacheId: string; uploadId: string; uploadUrls: string[] }
+    data?: { cacheId: number; uploadId: string; uploadUrls: string[] }
   }> => {
     try {
-      const reserveCacheResponse = await cacheHttpClient.reserveCache(key, [
-        version
-      ])
+      const reserveCacheResponse = await cacheHttpClient.reserveCache(
+        key,
+        [version],
+        {
+          cacheSize: size
+        }
+      )
       if (reserveCacheResponse?.result?.cacheId) {
+        core.info(`Reserved cache ${reserveCacheResponse.result.cacheId}`)
         return {
           success: true,
           data: {
@@ -60,7 +65,7 @@ export function getCacheClient() {
         return { success: false }
       } else {
         const { statusCode, statusText } = reserveCacheResponse
-        const data = await reserveCacheResponse.readBody()
+        const data = reserveCacheResponse.result
         const buildedError = new HandledError(statusCode, statusText, data)
         return handleFetchError('Unable to reserve cache')(buildedError)
       }
@@ -73,20 +78,11 @@ export function getCacheClient() {
     cacheId: number,
     uploadId: string,
     uploadUrls: string[],
-    stream: Readable
+    tempFile: string
   ): Promise<void> => {
     try {
-      //* Create a temporary file to store the cache
-      const tempFile = getTempCachePath(cacheId)
-      const writeStream = createWriteStream(tempFile)
-      await streamToPromise(stream.pipe(writeStream))
-      core.info(`Saved cache to ${tempFile}`)
-
       await cacheHttpClient.saveCache(cacheId, tempFile, uploadUrls, uploadId)
       core.info(`Saved cache ${cacheId}`)
-
-      //* Remove the temporary file
-      await unlink(tempFile)
     } catch (error) {
       handleFetchError('Unable to upload cache')(error)
     }
@@ -118,6 +114,9 @@ export function getCacheClient() {
         }
       }
     } catch (error) {
+      if (error instanceof Error && error.toString().includes('404')) {
+        return { success: false }
+      }
       return handleFetchError('Unable to query cache')(error)
     }
   }
