@@ -63,6 +63,21 @@ export function getCacheClient() {
         }
       } else if (reserveCacheResponse?.statusCode === 409) {
         return { success: false }
+      } else if (reserveCacheResponse?.statusCode === 400) {
+        // Handle specific 400 error cases
+        const message = reserveCacheResponse.result?.message || 'Unknown error'
+
+        if (message.includes('Cache size exceeds maximum')) {
+          core.warning(message)
+        } else if (message.includes('Cache entry already exists')) {
+          core.info(message)
+        } else {
+          core.warning(`Unexpected 400 error: ${message}`)
+        }
+
+        // Don't continue if we have a 400 error since in all these cases we know we don't
+        // want to save the cache blob.
+        return { success: false }
       } else {
         const { statusCode, statusText } = reserveCacheResponse
         const data = reserveCacheResponse.result
