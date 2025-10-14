@@ -1,3 +1,9 @@
+## ⚠️ Archive Notice
+
+Blacksmith now supports transparent caching as explained in https://www.blacksmith.sh/blog/cache. To this effect it is recommended to switch to the upstream maintained versions of this action as you will continue to leverage our much faster caching without any code changes. This action will no longer receive dependency or security updates.
+
+---
+
 # Caching for Turborepo with GitHub Actions
 
 [![CI Status](https://github.com/rharkor/caching-for-turbo/workflows/ci/badge.svg)](https://github.com/rharkor/caching-for-turbo/actions)
